@@ -1,0 +1,496 @@
+=== PAGE 1 ===
+2025 5th International Conference on Intelligent Cybernetics Technology & Applications (ICICyTA)
+Enhanced Image Steganography Through
+Multi-Parameter Texture Analysis
+1st Sarah Alissa Putri 2nd Tohari Ahmad
+Department of Informatics Department of Informatics
+Institut Teknologi Sepuluh Nopember Institut Teknologi Sepuluh Nopember
+Surabaya, Indonesia Surabaya, Indonesia
+6025251070@student.its.ac.id tohari@its.ac.id
+Abstract—In the modern era, most communication is raises the possibility of the hidden information being revealed.
+conducted through public networks, where transmitted data are Image steganography techniques can be categorized into two
+highly vulnerable and these networks cannot guarantee privacy, main domains: the spatial domain and the frequency domain.
+integrity, or confidentiality. Steganography, specifically image In spatial domain-based steganography methods, various
+steganography, is widely used to embed sensitive data while techniques have been proposed including histogram shift,
+preserving visual integrity. This research proposes an adaptive pixel value difference (PVD), modulus-based operations, and
+embedding approach using three statistical parameters
+dual-feature adaptive embedding [2], [3], [7]. Among these
+simultaneously: standard deviation, range, and entropy
+approaches, pixel value differences are widely used in other
+calculated from 3×3-pixel blocks. The embedding process
+research because of their ability to divide images into smooth
+evaluates each pixel's local texture complexity through these
+areas and edge areas based on pixel value differences, thereby
+features, then apply hybrid rules to determine embedding
+allowing more secret data to be stored in sharp areas than in
+capacity dynamically by allocating 1 bit for low-complexity
+smooth areas while maintaining visual quality [3]. Previous
+regions, 2 bits for medium-complexity regions, and skipping
+research employs the pair-pixel difference technique with
+high-complexity regions. This adaptive allocation is validated
+standard deviation to represent image texture, enabling
+through pixel-pair analysis to ensure conservative embedding.
+Experimental validation on eight images from the USC-SIPI adaptive embedding in noisier regions, achieving a PSNR
+database with payloads ranging from 1 kb to 100 kb shows value above 58 dB and a perfect SSIM score [7]. However,
+consistent superiority, with PSNR improvement of 3.9 to 4.0 dB this approach only relies on the standard deviation of 3×3-
+on natural images. The threshold configuration of standard pixel blocks, so the structural characteristics of the image are
+deviation (10, 25), range (20, 50), and entropy (1.2, 2.2) proved still not optimally accommodated.
+effective across various image characteristics. Results show an
+This research aims to develop an enhanced image
+optimal point at 20-50 kb payload where PSNR remains above
+steganography method that optimally balances embedding
+58 dB. This method maintains excellent visual quality with
+PSNR greater than 55 dB even at 100 kb payload, proving its capacity and visual quality by integrating multiple texture
+applicability for various scenarios. analysis parameters. Specifically, the objective is to combine
+standard deviation, range, and entropy metrics to achieve
+Keywords—steganography, data hiding, information security, more adaptive and accurate identification of embedding
+cyber security, ICT infrastructure locations in cover images, thereby improving both PSNR
+values and payload capacity compared to existing single-
+I. INTRODUCTION parameter approaches.
+Communication through public networks has made
+The main contributions of this research are as follows:
+transmitted data highly vulnerable, as these networks cannot
+guarantee privacy, integrity, or confidentiality. The increasing • Visual quality improvement is achieved through
+reliance on the Internet for exchanging sensitive information multi-parameter texture analysis, including standard
+has created significant security challenges [1]. Among various deviation, range, and entropy, resulting in higher
+data protection techniques, steganography has become a PSNR values in stego images.
+prominent approach for data hiding, enabling the embedding
+• Payload capacity increase by applying a case-based
+of secret information into digital media such as images [2],
+decision-making mechanism that adaptively
+[3], audio [4], or video [5] while concealing its existence and
+determines bit allocation based on comprehensive
+making the hidden data indistinguishable from the cover
+feature evaluation.
+medium. In image steganography, the main objective is to
+embed secret data invisibly and resist detection by The outline of the paper is as follows. The relevant
+steganalysis techniques, typically achieved by utilizing literature on image steganography is reviewed in Section II.
+redundant bits in the image without altering its visual The proposed method is described in Section III, where its key
+appearance [6]. The process involves three basic concepts: the features and innovations are highlighted. Experimental results
+cover medium as the original digital medium carrying hidden are presented in Section IV. Finally, conclusion is provided in
+information, the secret data as the confidential content being Section V.
+embedded, and the stego image as the final product after the
+embedding process through the steganography algorithm. II. RELATED WORKS
+One of the main challenges in image steganography is This section reviews previous research on information
+maintaining a balance between the capacity of hidden data and hiding in digital images, emphasizing recent developments in
+the visual quality of the stego image. As the size of hidden steganography and the contribution of this research. Recent
+data increases, image quality tends to decrease, which in turn advancements include AI-assisted techniques that use deep
+979-8-3315-6140-6/25/$31.00 ©2025 IEEE 60
+44626311.5202.77686ATYCICI/9011.01
+:IOD
+|
+EEEI
+5202©
+00.13$/52/6-0416-5133-8-979
+|
+)ATyCICI(
+snoitacilppA
+&
+ygolonhceT
+scitenrebyC
+tnegilletnI
+no
+ecnerefnoC
+lanoitanretnI
+ht5
+5202
+Authorized licensed use limited to: Institut Teknologi Sepuluh Nopember. Downloaded on October 22,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply.
+
+=== PAGE 2 ===
+2025 5th International Conference on Intelligent Cybernetics Technology & Applications (ICICyTA)
+learning, such as CNN-based predictors for optimizing III. PROPOSED METHOD
+embedding locations [8], and hybrid methods combining
+This section describes both the embedding and extraction
+neural networks with optimization algorithms for enhanced
+procedures. The embedding workflow, shown in Fig. 1, is
+visual quality [9]. While AI-based approaches demonstrate
+detailed in Subsection A, and the extraction process, shown in
+promising results, they often require substantial
+Fig. 2, is explained in Subsection B.
+computational resources and complex training processes. In
+contrast, statistical multi-feature approaches offer a balance A. Embedding Process
+between performance and computational efficiency, making
+The embedding process consists of seven steps, as follows:
+them more suitable for resource-constrained environments
+and real-time applications. 1) Step 1: Load the cover image in grayscale and the
+secret message in binary form. If preprocessing is enabled,
+Several studies have explored statistical-based
+bilateral denoising and Gaussian filtering are applied to
+steganography techniques. A study proposes a pixel value
+reduce noise and smooth the image.
+differencing-based steganography method with a modulus
+function, which is optimized using the Differential Evolution
+algorithm to minimize MSE, thereby increasing the insertion 2) Step 2: Generate the embedding sequence by iterating
+capacity while maintaining the visual quality of the stego through all possible pixels in the cover image, starting from
+image and resisting RS analysis [3]. Another study [10] the first pixel of row (𝑖) and column (𝑗). Boundary pixels are
+evaluated encryption algorithms combined with LSB and excluded to ensure that every selected pixel has valid
+Spread Spectrum steganography methods. The results showed neighbors for local patch analysis.
+that the LSB method can keep the visual quality high and the
+histogram almost the same as the original image.
+3) Step 3: For each selected pixel (𝑖,𝑗), determine the
+Furthermore, in [11], a texture synthesis-based local patch using (1). The local patch is obtained from the
+steganography method with Gaussian filtering preprocessing neighbors of the selected pixel and stored as a 3×3 Matrix.
+is proposed, where data are embedded through the selection of
+candidate patches based on statistical features, thereby patch(𝑖,𝑗)=𝐼[𝑖−1∶𝑖+2,𝑗−1∶𝑗+2] (1)
+improving embedding efficiency while maintaining visual
+quality. However, this method still has limitations, such as 4) Step 4: Calculate the statical features of patch (1),
+better performance on random textures than structured
+which are used to characterize local texture complexity:
+textures, limited preprocessing on Gaussian filters, and not yet
+fully tested resistance to modern steganalysis attacks. Another
+• Standard Deviation (σ): measures local variation
+study [12] embeds secret data into complex textured image
+among neighboring pixels, as shown in (2). Higher
+areas by analyzing texture information from the cover image.
+values indicate greater noise, making the region
+This approach improves visual quality, achieving higher
+PSNR and SSIM values, while maintaining robustness and more suitable for embedding additional bits, where
+embedding capacity. In addition, Muzli et al. [7] proposed the 𝑁 is the total number of pixels, while 𝑥 𝑘 represents
+PairStruct method, which adaptively inserts secret data by the intensity value of the 𝑘-th pixel.
+considering pixel differences and the local standard deviation
+of image patches.
+σ= √ 1 ∑𝑁 (𝑥 1 ∑𝑁 𝑥 )2 (2)
+Based on previous studies, this research introduces 𝑁 𝑘=1 𝑘− 𝑁 𝑘=1 𝑘
+bilateral denoising and Gaussian filtering as preprocessing
+• Range (𝑅) : represents the difference between
+steps to improve image smoothness and reduce noise before
+maximum and minimum pixel values in the patch,
+insertion. The proposed method extends beyond standard
+as shown in (3). Higher range indicates stronger
+deviation by incorporating range (maximum-minimum pixel
+contrast, where 𝑥 denotes the intensity value of the
+values) and entropy as evaluation parameters, where entropy 𝑘
+𝑘-th pixel in the patch.
+captures information richness in local regions for more
+adaptive and less detectable insertion [13]. Following [10]'s
+𝑅 =max(𝑥 )−min(𝑥 ) (3)
+demonstration of LSB-based insertion effectiveness in 𝑘 𝑘
+balancing security with visual quality, the method introduces
+a new threshold strategy for standard deviation while • Entropy (H): measures the information richness of
+maintaining the PairStruct principle that combines standard the patch as shown in (4). Higher entropy means
+deviation with pixel difference. The final embedding capacity more complex texture, making the region better for
+is determined through combined evaluation of standard hiding data. The total number of gray levels is
+deviation, range, entropy, and adapted PairStruct rules, represented by 𝐿, and 𝑝 𝑖 denotes the probability of
+achieving improved balance among payload capacity, image the 𝑖-th gray level in the patch.
+quality, and detection resistance.
+𝐻 =−∑𝐿 𝑝𝑙𝑜𝑔 (𝑝) (4)
+𝑖=1 𝑖 2 𝑖
+Authorized licensed use limited to: Institut Teknologi Sepuluh Nopember. Downloaded on October 22,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply.
+61
+
+=== PAGE 3 ===
+2025 5th International Conference on Intelligent Cybernetics Technology & Applications (ICICyTA)
+Fig. 1. Embedding process workflow.
+of local pairing deviation provides additional texture
+information.
+𝐷(𝑖,𝑗)=𝐼(𝑖,𝑗+1)−𝐼(𝑖,𝑗) (5)
+6) Step 6: Evaluate each pixel using hybrid rules to
+determine embedding suitability based on computed features.
+Pixels embed 1 bit if all features are Low, 2 bits if at least two
+features are Medium with none High, and 1 bit if exactly one
+feature is High while others are Low or Medium. Pixels with
+two or more High features are skipped.
+7) Step 7: Determine final embedding capacity by
+combining feature-based and pixel-pair decisions. The
+minimum value between bits selected from statistical features
+(𝑓𝑒𝑎𝑡𝑢𝑟𝑒_𝑏𝑖𝑡𝑠) and pixel-pair analysis (𝑝𝑎𝑖𝑟𝑖𝑛𝑔_𝑏𝑖𝑡𝑠) is
+chosen to ensure conservative embedding, with at least one
+bit always embedded for non-skipped pixels, as shown in (6).
+𝑓𝑖𝑛𝑎𝑙 =
+𝑏𝑖𝑡𝑠
+max (1,min (𝑓𝑒𝑎𝑡𝑢𝑟𝑒_𝑏𝑖𝑡𝑠,𝑝𝑎𝑖𝑟𝑖𝑛𝑔_𝑏𝑖𝑡𝑠)) (6)
+Finally, the selected bits are embedded into the LSBs of
+each pixel. This process is repeated until the entire secret
+Fig. 2. Extracting process workflow.
+message is embedded, producing the stego image.
+5) Step 5: Compute pixel-pair features using (5).
+B. Extracting Process
+Following the PairStruct method [7], the difference between
+The extracting process consists of seven steps. This
+the current pixel and its right neighbor is used as an indicator
+reversible approach allows for the recovery of both the cover
+Authorized licensed use limited to: Institut Teknologi Sepuluh Nopember. Downloaded on October 22,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply.
+62
+
+=== PAGE 4 ===
+2025 5th International Conference on Intelligent Cybernetics Technology & Applications (ICICyTA)
+image and the secret message. The extraction process is kb to 100 kb to assess how embedding capacity affected stego
+carried out as follows: image quality.
+Three metrics evaluate the method's performance. PSNR
+1) Step 1: Load the stego image, the original cover image,
+measures distortion between cover and stego images using
+and the length of the secret message to be extracted. The same
+Mean Squared Error (MSE), with higher values indicating
+embedding sequence is used to ensure synchronization with
+better quality, as defined in (7) and (8). The number of rows
+the embedding stage.
+and columns denotes by 𝑀 and 𝑁. SSIM, as formulated in
+(9), evaluates perceptual similarity in terms of luminance,
+2) Step 2: Iterate through all possible pixles in the stego
+contrast, and structure between the cover image (𝑐) and the
+image, starting from the first pixel of row (𝑖) and column (𝑗).
+stego image (𝑠), producing values from 0 to 1. These metrics
+Boundary pixels are excluded, consistent with the embedding
+rely on pixel intensity averages (𝛼𝑖,𝛼𝑗), variance (𝛾𝑖,𝛾𝑗),
+process.
+and covariance (𝛾𝑖𝑗). Recovery Rate (RR), calculated in (10),
+measures extraction accuracy by comparing retrieved bits
+3) Step 3: For each selected pixel (𝑖,𝑗), determine the with the total payload. The evaluation formulas are:
+local patch using (1). The patch is constructed from the
+neighbors of the pixel and stored as a 3×3 matrix. 2552
+𝑃𝑆𝑁𝑅 =10𝑥𝑙𝑜𝑔 (7)
+10𝑀𝑆𝐸
+4) Step 4: Recalculate the statistical features of patch (1)
+to characterize the local texture complexity using (2), (3), and 𝑀𝑆𝐸 = 1 ∑𝑀 ∑𝑁 (𝑐(𝑖,𝑗)−𝑠(𝑖,𝑗))2 (8)
+𝑀∙𝑁 𝑖=1 𝑗=1
+(4).
+𝑆𝑆𝐼𝑀 =
+(2𝛼𝑖𝛼𝑗+𝑐1)(2𝛾𝑖𝑗+𝑠1)
+(9)
+5) Step 5: Compute pixel-pair features using (5). (𝛼𝑖 2+𝛼𝑗 2+𝑐1)(𝛾𝑖 2+𝛾𝑗 2+𝑠)
+6) Step 6: Decide whether the pixel was ignored during 𝑅𝑅 = 𝑆𝑢𝑐𝑐𝑒𝑠𝑠𝑓𝑢𝑙 𝑏𝑖𝑡 𝑒𝑥𝑡𝑟𝑎𝑐𝑡𝑒𝑑 (10)
+𝑇𝑜𝑡𝑎𝑙 𝑏𝑖𝑡 𝑒𝑚𝑏𝑒𝑑𝑒𝑑
+embedding by applying the same hybrid rules used in Step 6
+of the embedding process. Pixels that satisfy Case D are
+skipped. B. Results and Discussion
+The first experiment results show a pattern where the
+7) Step 7: The final embedding capacity is recomputed standard deviation and range parameters had minimal effects
+using (6), combining both feature-based and pixel-pair on steganography quality, while entropy showed significant
+decisions. The corresponding bits are then extracted from the and variable effects. In baboons with a payload of 50 kb,
+pixel's LSBs, repeating until the entire secret message is standard deviation variations from 5 to 15 produce consistent
+recovered. PSNR at 58.346-58.362 dB, as do range variations that
+remain in the same range. Similar patterns were observed in
+IV. EXPERIMENTAL RESULTS peppers (58.318-58.348 dB), boats (58.355-58.371 dB), and
+medical images with hands at 58.354 dB, legs at 58.333 dB,
+A. Experimentation and Evaluation
+and heads at 58.265-58.275 dB. Even extreme ranges such as
+The experiments were conducted on Google Colab with
+low: 20, medium: 70 to low: 20, medium: 90 on boat and leg
+Python 3.10, using grayscale images obtained from the USC-
+still produced stable PSNR, indicating that these two
+SIPI Image Database [14] for natural images and DICOM
+parameters are not discriminative enough in distinguishing
+Library [15] for medical images. The first stage determined
+embeddable regions. This occurs because standard deviation
+appropriate threshold values using six cover images:
+and range computations on 3×3 patches produce relatively
+"baboon," "peppers," "boat," "hand," "leg," and "head," each
+homogeneous values within the same category, where
+tested with 20 kb and 50 kb payloads of random binary data.
+patches in complex regions remain classified as complex and
+Threshold tuning evaluated various parameter combinations:
+those in smooth regions remain smooth, even when the
+standard deviation (5-15 for low, 20-30 for medium), range
+threshold is adjusted within a reasonable range.
+(10-30 for low, 40-60 for medium), and entropy (0.8-1.6 for
+low, 1.8-2.6 for medium). Results obtained from testing In contrast, entropy showed a significant effect with
+across these settings showed consistent performance patterns different patterns. In baboons, increasing max entropy from
+for different image textures, and based on the stability of 1.8 to 2.6 decreased PSNR from 58.362 dB to 58.343 dB,
+PSNR and SSIM values under all conditions, the final while peppers showed a more consistent degradation from
+thresholds were determined as follows: standard deviation 58.348 dB to 58.304 dB. The head, as the most complex
+(low: 10, medium: 25), range (low: 20, medium: 50), and medical image, showed the widest variation from 58.265 dB
+entropy (low: 1.2, medium: 2.2). to 58.369 dB (0.104 dB range). These differences reflected
+intrinsic image characteristics. Baboons, with their complex
+For comprehensive evaluation, two medical images,
+textures, experience degradation when high entropy disrupted
+"abdominal" and "chest", were added, totaling eight test
+texture coherence, peppers were more sensitive because
+images with varying texture characteristics.
+embedding in smooth areas appeared as noise. Boat showed
+These images are standard benchmarks in steganography
+superior stability with balanced complexity. Hand and leg
+research due to their varying texture characteristics. The
+with continuous structures show good stability, but head with
+complete evaluation employed payload sizes ranging from 1
+extreme heterogeneity becomes highly sensitive to entropy.
+Authorized licensed use limited to: Institut Teknologi Sepuluh Nopember. Downloaded on October 22,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply.
+63
+
+=== PAGE 5 ===
+2025 5th International Conference on Intelligent Cybernetics Technology & Applications (ICICyTA)
+TABLE I. PSNR VALUES ACROSS THE PAYLOADS AND COVER IMAGES FOR THE PROPOSED METHOD
+Cover PSNR for Each Cover Based on Payload Size (dB)
+Image
+[14], [15] 1 kb 10 kb 20 kb 30 kb 40 kb 50 kb 60 kb 70 kb 80 kb 90 kb 100 kb
+Baboon 75.432 65.334 62.379 60.552 60.552 58.362 57.558 56.872 56.266 55.780 55.320
+Peppers 75.165 65.347 62.337 60.559 59.292 58.348 57.567 56.875 56.313 55.813 55.330
+Boat 75.258 65.305 62.351 60.567 59.304 58.367 57.525 56.851 56.287 55.803 55.345
+Hand 75.405 65.302 62.293 60.575 59.317 58.354 57.556 56.844 56.284 55.772 55.322
+Leg 75.327 65.314 62.286 60.549 59.302 58.333 57.536 56.898 56.297 55.782 55.334
+Head 75.353 65.032 62.198 60.476 59.195 58.272 57.468 56.812 56.263 55.755 55.298
+Abdominal 75.477 65.198 62.292 60.544 59.311 58.334 57.531 56.857 56.316 55.793 55.320
+Chest 75.441 65.248 62.276 60.540 59.314 58.370 57.514 56.873 56.294 55.776 55.312
+Low entropy patches are inherently safe, while max entropy shows excellent results in natural images with baboons at
+58.362 dB and boats at 58.372 dB, indicating a universally
+applicable perfect spot.
+TABLE II. COMPARISON OF PSNR, SSIM, AND RR BETWEEN Experimental results in Table I showed quality
+PRIOR RESEARCH AND THE PROPOSED METHOD ON BABOON IMAGE
+degradation patterns in all images, indicating the algorithm
+Pay PSNR (dB) SSIM RR (%) adaptively utilized regions with the best embeddability first.
+load The optimal point was in the 20-50 kb range, where PSNR
+Size Prior Propos Prior Propos Prior Propos
+[7] -ed [7] -ed [7] -ed remained very high (58.367-60.544 dB) with moderate
+(kb)
+degradation per kb. Based on ANOVA testing on PSNR data
+40 59.162 60.552 1.000 1.000 100 100
+from eight different images in Table I, the calculated F-value
+50 57.626 58.362 1.000 1.000 100 100 was significantly smaller than the F-table value at
+60 56.856 57.558 1.000 0.999 100 100 significance levels of 0.05 and 0.01, confirming no
+statistically significant difference between PSNR values
+70 56.158 56.872 1.000 0.999 100 100
+across image types. While individual images showed slight
+80 55.629 56.266 1.000 0.999 100 100 variations, with head images producing relatively lower
+values (58.265-58.369 dB), these differences were not
+90 55.208 55.780 1.000 0.999 100 100
+statistically significant, indicating variations within normal
+100 54.832 55.320 1.000 0.999 100 100 ranges. This demonstrated that the method produced stable
+data embedding quality regardless of image type or texture
+TABLE III. COMPARISON OF PSNR, SSIM, AND RR BETWEEN complexity, confirming threshold robustness. For larger
+PRIOR RESEARCH AND THE PROPOSED METHOD ON HEAD IMAGE
+capacities, using multiple cover images with moderate
+Pay PSNR (dB) SSIM RR (%) payloads was more efficient than a single image beyond 100
+load
+kb. Images with complex or balanced textures (chest,
+Size Prior Propos Prior Propos Prior Propo
+[7] -ed [7] -ed [7] -sed abdominal, leg) maintained PSNR above 55 dB even at 100
+(kb)
+- kb, yielding better performance than those with extreme
+40 58.626 59.195 - 0.997 100
+heterogeneity (head).
+-
+50 57.656 58.272 - 0.996 100
+Comparison with previous studies showed measurable
+- -
+60 56.854 57.468 0.996 100
+quality improvement. In baboon images, Table II showed
+70 56.251 56.812 - 0.995 - 100 consistent PSNR improvement across all payloads compared
+- - to PairStruct, indicating that integrating entropy and range
+80 55.749 56.263 0.994 100
+with standard deviation better identified embedding areas.
+- -
+90 55.205 55.755 0.993 100 However, identical SSIM values (1.000 at 40-50 kb, 0.999 at
+100 54.715 55.298 - 0.992 - 100 60-100 kb) indicated quality improvement mainly came from
+better pixel error distribution rather than structure
+becomes the critical boundary between safe and destructive preservation. Comparison of head images in Table III
+embedding. exhibited similar patterns with consistent PSNR
+improvement. The head image was chosen because it
+Given these findings on parameter sensitivity, the final
+exhibited the most complex anatomical structure and lowest
+thresholds were set as standard deviation (10, 25), range (20,
+PSNR among tested medical images in Table I. However,
+50), and entropy (1.2, 2.2). Although standard deviation and
+smaller margins due to anatomical heterogeneity caused less
+range showed minimal influence, they were maintained as
+uniform embedding distribution and more pronounced SSIM
+safety mechanisms, providing sufficient selectivity without
+degradation (0.997 to 0.992), indicating higher sensitivity to
+being too restrictive on embedding capacity. The entropy
+increased capacity. All configurations achieved 100%
+threshold of 1.2-2.2 is the most critical parameter, where 1.2
+recovery rate, confirming extraction reliability.
+provided a safety margin against overly homogeneous areas
+detectable through statistical analysis, and 2.2 was chosen A comparison between baboon and head images showed
+because values above this consistently produced lower that image characteristics affected improvement magnitude,
+PSNR, especially on peppers and heads. The value of 2.2 also where natural images with complex but organized textures
+achieved up to 1.390 dB improvement, while medical images
+Authorized licensed use limited to: Institut Teknologi Sepuluh Nopember. Downloaded on October 22,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply.
+64
+
+=== PAGE 6 ===
+2025 5th International Conference on Intelligent Cybernetics Technology & Applications (ICICyTA)
+with extreme heterogeneity achieved only 0.569 dB, REFERENCES
+confirming that texture-based adaptive embedding
+[1] J. Qiu, “Generative Image Steganography Scheme Based on Deep
+effectiveness depended on spatial distribution of embedding Learning,” in Proceedings - 2022 International Conference on
+regions. The optimal operational range was identified at 40- Education, Network and Information Technology, ICENIT 2022,
+Institute of Electrical and Electronics Engineers Inc., 2022, pp. 191–
+50 kb payload, showing consistent applicability with PSNR
+194. doi: 10.1109/ICENIT57306.2022.00049.
+exceeding 58 dB and SSIM above 0.996. Beyond this limit,
+[2] J. Hao, P. Ping, X. Peng, and Z. Gao, “Reversible data hiding scheme
+quality degradation accelerated as the algorithm used less based on image partitioning and histogram shifting,” in Proceedings -
+ideal locations. IEEE 8th International Conference on Big Data Computing Service
+and Applications, BigDataService 2022, Institute of Electrical and
+Despite these promising results, the proposed method had Electronics Engineers Inc., 2022, pp. 27–34. doi:
+several limitations. First, it was highly dependent on image 10.1109/BigDataService55688.2022.00012.
+[3] L. Akhila and V. J. Manoj, “Image Steganography using Pixel Value
+characteristics, where extreme heterogeneity (head images)
+Differencing with Modulus Function and Optimization,” in
+produced the lowest PSNR and greatest variation. Second, Proceedings - 4th International Conference on Smart Systems and
+parameter redundancy existed as standard deviation and Inventive Technology, ICSSIT 2022, Institute of Electrical and
+range showed minimal discriminative effect while only Electronics Engineers Inc., 2022, pp. 1369–1373. doi:
+10.1109/ICSSIT53264.2022.9716314.
+entropy showed significant influence, increasing algorithm
+[4] J. Wu, B. Chen, W. Luo, and Y. Fang, “Audio Steganography Based
+complexity without proportional benefits. Third, on Iterative Adversarial Attacks against Convolutional Neural
+computational load was high because each embedding Networks,” IEEE Transactions on Information Forensics and Security,
+position required multi-parameter calculations on 3×3 vol. 15, pp. 2282–2294, 2020, doi: 10.1109/TIFS.2019.2963764.
+[5] S. Debnath, R. K. Mohapatra, and R. Dash, “Secret data sharing
+patches, feature classification, and preprocessing, requiring
+through coverless video steganography based on bit plane
+longer processing time for large images. segmentation,” Journal of Information Security and Applications, vol.
+78, p. 103612, Nov. 2023, doi: 10.1016/J.JISA.2023.103612.
+V. CONCLUSION [6] K. S. Sowmya, S. Hegde, P. Sunag, and R. P. Varun, “Exploring the
+Effectiveness of Steganography Techniques: A Comparative
+This study proves that multi-feature adaptive threshold-
+Analysis,” in Proceedings - 2023 3rd International Conference on
+based steganography is superior to single-parameter Smart Data Intelligence, ICSMDI 2023, Institute of Electrical and
+approaches. Comprehensive experiments on eight Electronics Engineers Inc., 2023, pp. 181–186. doi:
+heterogeneous images yielded three key findings: first, 10.1109/ICSMDI57622.2023.00042.
+entropy with an upper limit of 2.2 is the most decisive [7] A. Muzli, A. W. Chanda D’Layla, N. Jean De La Croix, and T. Ahmad,
+“PairStruct: A Steganography Algorithm Based on Image Structure and
+parameter, while standard deviation and range serve as safety
+Pair-Pixels Difference Expansion,” in 2025 5th International
+mechanisms; second, natural images with structured textures
+Conference on Advanced Research in Computing: Converging
+and medical images with balanced distributions show better Horizons: Uniting Disciplines in Computing Research through AI
+resilience than heterogeneous images; third, the method Innovation, ICARC 2025 - Proceedings, Institute of Electrical and
+exhibits optimal performance at 20-50 kb payload (PSNR 58- Electronics Engineers Inc., 2025. doi:
+10.1109/ICARC64760.2025.10963215.
+60 dB). The demonstrated balance makes this method suitable
+[8] Y. Luo et al., “Reversible Data Hiding based on optimized CNN
+for secure digital communication and medical image
+predictor and Prediction Error Expansion with Lower Surround
+protection, where adaptive thresholding ensures reliable Background Complexity,” Computers and Electrical Engineering, vol.
+transmission and enables secure patient data embedding 119, Oct. 2024, doi: 10.1016/j.compeleceng.2024.109472.
+without compromising diagnostic integrity. [9] S. Jaya Prakash and K. Mahalakshmi, “Improved reversible data hiding
+scheme employing dual image-based least significant bit matching for
+Future work should address several critical areas to secure image communication using style transfer,” Visual Computer,
+enhance practical deployment. First, developing adaptive vol. 38, no. 12, pp. 4129–4150, Dec. 2022, doi: 10.1007/s00371-021-
+02285-1.
+threshold optimization that dynamically adjusts parameters
+[10] M. Kataria, K. Jain, and N. Subramanian, “Exploring Advanced
+based on real-time image characteristics would improve
+Encryption and Steganography Techniques for Image Security,” in
+performance consistency across unknown image types. ISDFS 2023 - 11th International Symposium on Digital Forensics and
+Second, implementing machine learning-based region Security, Institute of Electrical and Electronics Engineers Inc., 2023.
+classification could refine embedding decisions by learning doi: 10.1109/ISDFS58141.2023.10131890.
+optimal texture patterns from large-scale datasets. Third, [11] S. R. Patil and R. C. Vijay, “Spatial Domain Texture Synthesis for Data
+Embedding,” in 2021 International Conference on Computing,
+exploring encryption integration would strengthen security
+Communication and Green Engineering, CCGE 2021, Institute of
+without compromising the demonstrated quality-capacity
+Electrical and Electronics Engineers Inc., 2021. doi:
+balance. Finally, incorporating deep learning-based 10.1109/CCGE50943.2021.9776420.
+steganalysis resistance frameworks is essential to ensure the [12] L. Niu and J. Zhang, “An image steganography method based on
+method remains undetectable against modern AI-powered texture perception,” in 2022 IEEE 2nd International Conference on
+Data Science and Computer Application, ICDSCA 2022, Institute of
+detection systems, particularly as steganalysis techniques
+Electrical and Electronics Engineers Inc., 2022, pp. 625–628. doi:
+continue to evolve.
+10.1109/ICDSCA56264.2022.9988162.
+[13] J. Qu, D. Huang, Y. Shi, J. Liu, and W. Tang, “Entropy-aware dynamic
+ACKNOWLEDGMENT path selection network for multi-modality medical image fusion,”
+Information Fusion, vol. 123, Nov. 2025, doi:
+This research is funded by the Indonesian Endowment
+10.1016/j.inffus.2025.103312.
+Fund for Education (LPDP) on behalf of the Indonesian
+[14] A. Weber, “The USC-SIPI Image Database,” University of Southern
+Ministry of Higher Education, Science and Technology and California. Accessed: Sep. 12, 2025. [Online]. Available:
+managed under the EQUITY Program (Contract https://sipi.usc.edu/database/
+No4299/B3/DT.03.08/2025 & No 3029/PKS/ITS/2025). [15] DICOM Library, “Free online medical knowledge exchange portal -
+DICOM Library.” Accessed: Sep. 12, 2025. [Online]. Available:
+https://www.dicomlibrary.com/
+Authorized licensed use limited to: Institut Teknologi Sepuluh Nopember. Downloaded on October 22,2026 at 11:29:24 UTC from IEEE Xplore. Restrictions apply.
+65
+

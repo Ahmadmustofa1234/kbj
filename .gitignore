@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large DICOM raw series datasets
+02ef8f31ea86a45cfce6eb297c274598/
+3b1cda064d9d7f2afffac6dab4b6eaf9/
+9ab20df7b89dd84716029b777ed7a5b2/
+a05270ea39afe373939d192e69ef435a/
+feb6447a72c9a0a31e1bb4459e547964/
+
+# Generated stego image folders
+stego_png/
+stego_png_*/
+baseline_final/
+test1_audited_baseline_png/
+
+# Temporary / scratch files
+scratch/
+.idea/
+.vscode/

@@ -1,0 +1,5 @@
+“Analisis Reprodusibilitas dan Sensitivitas Payload Acak terhadap Kualitas Citra Stego pada Metode Steganografi Berbasis Analisis Tekstur Multi-Parameter”
+
+Fokus penelitiannya: menguji apakah hasil PSNR, SSIM, dan recovery rate tetap konsisten ketika payload acaknya berbeda, dengan gambar, algoritma, dan ukuran payload yang sama. Gunakan beberapa seed, lalu laporkan rata-rata dan simpangan baku hasilnya.
+
+Judul ini tidak menyimpulkan bahwa paper tersebut keliru—hanya menguji kestabilan dan keterulangan hasilnya. Sebelum ditetapkan, cek dulu penelitian terdahulu untuk memastikan topik sensitivitas payload ini memang belum banyak dikaj
