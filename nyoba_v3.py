@@ -19,6 +19,11 @@ Ablasi Tambahan untuk Memisahkan Kontribusi Sobel:
   [E_cap_only]   : Kapasitas 4-Parameter Sobel, tetapi Urutan Raster Scan
   [E_route_only] : Kapasitas 3-Parameter Asli, tetapi Urutan Guided Sobel
   [E_full]       : Kapasitas 4-Parameter Sobel + Urutan Guided Sobel
+
+Varian Optimasi PSNR & SSIM:
+  [F1] Optimized Two-Phase Embedding : Pemanfaatan bit-0 & bit-1 terpadu (Active Dual-Bit Packing)
+  [F2] Distortion-Aware Selection    : Sensitivitas varians SSIM HVS Score ((sigma^2 + 58.5) * ln(1+G) + R)
+  [F3] Combined Optimization         : Hibridisasi stabilitas PSNR dan pendongkrak SSIM simultan
 ================================================================================
 """
 
@@ -714,7 +719,237 @@ def extract_blind_e_route_only(stego, nbits):
     return bits
 
 # ==============================================================================
-# 9. METRIK EVALUASI KUALITAS
+# 9. VARIAN OPTIMASI PSNR DAN SSIM: F1, F2, DAN F3
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# [F1] Optimized Two-Phase Embedding:
+# Pemanfaatan bit-0 dan bit-1 terpadu (Active Dual-Bit Packing pada 2-bit eligible)
+# ------------------------------------------------------------------------------
+def compute_plan_f1(image):
+    """
+    Rencana embedding Varian F1: Optimized Two-Phase Embedding.
+    Mengoptimalkan pemanfaatan bit-0 dan bit-1 pada piksel yang memiliki kapasitas 2-bit
+    berdasarkan urutan skor masking tekstur Sobel.
+    """
+    model = compute_four_parameter_sobel_model(image)
+    final_cap = model['final_cap']
+    grad_arr = model['grad_arr']
+    std_arr = model['std_arr']
+    rng_arr = model['rng_arr']
+
+    idx_el = np.flatnonzero(final_cap > 0)
+    score_f1 = grad_arr[idx_el] + 2.0 * std_arr[idx_el] + rng_arr[idx_el]
+    order_f1 = idx_el[np.argsort(-score_f1, kind='stable')]
+    cap_f1 = final_cap[order_f1]
+    total_cap = int(np.sum(cap_f1))
+    return order_f1, cap_f1, total_cap, model
+
+def embed_f1(image, message):
+    """Penyisipan Varian F1: Menggunakan bit-0 dan bit-1 secara terpadu."""
+    message = np.asarray(message, dtype=np.uint8)
+    order_f1, cap_f1, total_cap, model = compute_plan_f1(image)
+    nbits = len(message)
+    if nbits > total_cap:
+        raise ValueError(f"Payload {nbits} bit melebihi kapasitas {total_cap} bit")
+
+    stego = image.copy()
+    interior = stego[1:-1, 1:-1].reshape(-1).copy()
+    pos = 0
+    for idx, c in zip(order_f1, cap_f1):
+        if pos >= nbits:
+            break
+        rem = nbits - pos
+        if c == 2 and rem >= 2:
+            interior[idx] = (int(interior[idx]) & 0xFC) | (int(message[pos]) << 1) | int(message[pos + 1])
+            pos += 2
+        else:
+            interior[idx] = (int(interior[idx]) & 0xFE) | int(message[pos])
+            pos += 1
+
+    stego[1:-1, 1:-1] = interior.reshape(image.shape[0] - 2, image.shape[1] - 2)
+    return stego, total_cap, model
+
+def extract_blind_f1(stego, nbits):
+    """Ekstraksi blind Varian F1 dari stego image."""
+    order_f1, cap_f1, total_cap, _ = compute_plan_f1(stego)
+    if nbits > total_cap:
+        raise ValueError("Ekstraksi gagal: kapasitas tidak cukup")
+
+    interior = stego[1:-1, 1:-1].ravel()
+    bits = np.empty(nbits, dtype=np.uint8)
+    pos = 0
+    for idx, c in zip(order_f1, cap_f1):
+        if pos >= nbits:
+            break
+        rem = nbits - pos
+        val = int(interior[idx])
+        if c == 2 and rem >= 2:
+            bits[pos] = (val >> 1) & 1
+            bits[pos + 1] = val & 1
+            pos += 2
+        else:
+            bits[pos] = val & 1
+            pos += 1
+
+    return bits
+
+# ------------------------------------------------------------------------------
+# [F2] Distortion-Aware Sobel Selection:
+# Optimasi prioritas piksel berdasarkan HVS SSIM Distortion Sensitivity
+# Score_F2 = (sigma^2 + 58.5) * ln(1 + G) + Range
+# ------------------------------------------------------------------------------
+def compute_plan_f2(image):
+    """
+    Rencana embedding Varian F2: Distortion-Aware Sobel Selection.
+    Mengoptimalkan prioritas pemilihan piksel menggunakan model sensitivitas
+    varians lokal SSIM (sigma^2 + 58.5) dikombinasikan dengan gradien Sobel tercompand.
+    """
+    model = compute_four_parameter_sobel_model(image)
+    final_cap = model['final_cap']
+    grad_arr = model['grad_arr']
+    std_arr = model['std_arr']
+    rng_arr = model['rng_arr']
+
+    idx_el = np.flatnonzero(final_cap > 0)
+    score_f2 = (std_arr[idx_el] ** 2 + 58.5) * np.log1p(grad_arr[idx_el]) + rng_arr[idx_el]
+    order_layer1 = idx_el[np.argsort(-score_f2, kind='stable')]
+
+    idx_2b = np.flatnonzero(final_cap == 2)
+    score_f2_2b = (std_arr[idx_2b] ** 2 + 58.5) * np.log1p(grad_arr[idx_2b]) + rng_arr[idx_2b]
+    order_layer2 = idx_2b[np.argsort(-score_f2_2b, kind='stable')]
+
+    total_cap = len(order_layer1) + len(order_layer2)
+    return order_layer1, order_layer2, total_cap, model
+
+def embed_f2(image, message):
+    """Penyisipan Varian F2: Distortion-Aware Guided Selection."""
+    message = np.asarray(message, dtype=np.uint8)
+    order_l1, order_l2, total_cap, model = compute_plan_f2(image)
+    nbits = len(message)
+    if nbits > total_cap:
+        raise ValueError(f"Payload {nbits} bit melebihi kapasitas {total_cap} bit")
+
+    stego = image.copy()
+    interior = stego[1:-1, 1:-1].reshape(-1).copy()
+
+    # Phase 1: Bit 0 pada Layer 1
+    n1 = min(nbits, len(order_l1))
+    for i in range(n1):
+        idx = order_l1[i]
+        interior[idx] = (int(interior[idx]) & 0xFE) | int(message[i])
+
+    # Phase 2: Bit 1 pada Layer 2 jika muatan melebihi piksel Layer 1
+    if nbits > len(order_l1):
+        n2 = nbits - len(order_l1)
+        for i in range(n2):
+            idx = order_l2[i]
+            interior[idx] = (int(interior[idx]) & 0xFD) | (int(message[len(order_l1) + i]) << 1)
+
+    stego[1:-1, 1:-1] = interior.reshape(image.shape[0] - 2, image.shape[1] - 2)
+    return stego, total_cap, model
+
+def extract_blind_f2(stego, nbits):
+    """Ekstraksi blind Varian F2 dari stego image."""
+    order_l1, order_l2, total_cap, _ = compute_plan_f2(stego)
+    if nbits > total_cap:
+        raise ValueError("Ekstraksi gagal: kapasitas tidak cukup")
+
+    interior = stego[1:-1, 1:-1].ravel()
+    bits = np.empty(nbits, dtype=np.uint8)
+
+    n1 = min(nbits, len(order_l1))
+    for i in range(n1):
+        idx = order_l1[i]
+        bits[i] = int(interior[idx]) & 1
+
+    if nbits > len(order_l1):
+        n2 = nbits - len(order_l1)
+        for i in range(n2):
+            idx = order_l2[i]
+            bits[len(order_l1) + i] = (int(interior[idx]) >> 1) & 1
+
+    return bits
+
+# ------------------------------------------------------------------------------
+# [F3] Combined Optimization:
+# Gabungan F1 dan F2 (Keseimbangan PSNR dan SSIM secara Simultan)
+# Score_F3 = 3.0 * sigma + G + Range + 0.1 * sigma^2
+# ------------------------------------------------------------------------------
+def compute_plan_f3(image):
+    """
+    Rencana embedding Varian F3: Combined Optimization.
+    Menggabungkan keunggulan seleksi sensitivitas varians SSIM dan kontur gradien Sobel
+    untuk mempertahankan kestabilan PSNR >= Baseline A sekaligus mendongkrak SSIM.
+    """
+    model = compute_four_parameter_sobel_model(image)
+    final_cap = model['final_cap']
+    grad_arr = model['grad_arr']
+    std_arr = model['std_arr']
+    rng_arr = model['rng_arr']
+
+    idx_el = np.flatnonzero(final_cap > 0)
+    score_f3 = 3.0 * std_arr[idx_el] + grad_arr[idx_el] + rng_arr[idx_el] + 0.1 * (std_arr[idx_el] ** 2)
+    order_layer1 = idx_el[np.argsort(-score_f3, kind='stable')]
+
+    idx_2b = np.flatnonzero(final_cap == 2)
+    score_f3_2b = 3.0 * std_arr[idx_2b] + grad_arr[idx_2b] + rng_arr[idx_2b] + 0.1 * (std_arr[idx_2b] ** 2)
+    order_layer2 = idx_2b[np.argsort(-score_f3_2b, kind='stable')]
+
+    total_cap = len(order_layer1) + len(order_layer2)
+    return order_layer1, order_layer2, total_cap, model
+
+def embed_f3(image, message):
+    """Penyisipan Varian F3: Combined Optimization."""
+    message = np.asarray(message, dtype=np.uint8)
+    order_l1, order_l2, total_cap, model = compute_plan_f3(image)
+    nbits = len(message)
+    if nbits > total_cap:
+        raise ValueError(f"Payload {nbits} bit melebihi kapasitas {total_cap} bit")
+
+    stego = image.copy()
+    interior = stego[1:-1, 1:-1].reshape(-1).copy()
+
+    # Phase 1: Bit 0 pada Layer 1
+    n1 = min(nbits, len(order_l1))
+    for i in range(n1):
+        idx = order_l1[i]
+        interior[idx] = (int(interior[idx]) & 0xFE) | int(message[i])
+
+    # Phase 2: Bit 1 pada Layer 2 jika muatan melebihi piksel Layer 1
+    if nbits > len(order_l1):
+        n2 = nbits - len(order_l1)
+        for i in range(n2):
+            idx = order_l2[i]
+            interior[idx] = (int(interior[idx]) & 0xFD) | (int(message[len(order_l1) + i]) << 1)
+
+    stego[1:-1, 1:-1] = interior.reshape(image.shape[0] - 2, image.shape[1] - 2)
+    return stego, total_cap, model
+
+def extract_blind_f3(stego, nbits):
+    """Ekstraksi blind Varian F3 dari stego image."""
+    order_l1, order_l2, total_cap, _ = compute_plan_f3(stego)
+    if nbits > total_cap:
+        raise ValueError("Ekstraksi gagal: kapasitas tidak cukup")
+
+    interior = stego[1:-1, 1:-1].ravel()
+    bits = np.empty(nbits, dtype=np.uint8)
+
+    n1 = min(nbits, len(order_l1))
+    for i in range(n1):
+        idx = order_l1[i]
+        bits[i] = int(interior[idx]) & 1
+
+    if nbits > len(order_l1):
+        n2 = nbits - len(order_l1)
+        for i in range(n2):
+            idx = order_l2[i]
+            bits[len(order_l1) + i] = (int(interior[idx]) >> 1) & 1
+
+    return bits
+
+# ==============================================================================
+# 10. METRIK EVALUASI KUALITAS
 # ==============================================================================
 def calc_metrics(cover, stego):
     mse = float(np.mean((cover.astype(np.float64) - stego.astype(np.float64)) ** 2))
@@ -723,17 +958,20 @@ def calc_metrics(cover, stego):
     return psnr, ssim_val, mse
 
 # ==============================================================================
-# 10. EKSEKUSI UTAMA (MAIN EXPERIMENTAL HARNESS)
+# 11. EKSEKUSI UTAMA (MAIN EXPERIMENTAL HARNESS)
 # ==============================================================================
 def main():
     t_global_start = time.time()
     print("=" * 120)
-    print("HASIL EKSPERIMEN LENGKAP METODE STEGANOGRAFI A, B, C, D, E & ABLASI SOBEL")
+    print("HASIL EKSPERIMEN LENGKAP METODE STEGANOGRAFI A, B, C, D, E, ABLASI, DAN OPTIMASI F1, F2, F3")
     print("  [A] Baseline Makalah Asli   : 3 Parameter + PairStruct (Raster Order, Cover-Assisted)")
     print("  [B] Sobel Raster            : 3 Param + Sobel non_med<=1 (Raster Order, Blind PNG)")
     print("  [C] Sobel Guided            : 3 Param + Sobel non_med<=1 (Category Guided, Blind PNG)")
     print("  [D] Adaptive Sobel Guided V2: 4 Param Sejati + PairStruct (Adaptive Sobel Masking, Blind PNG)")
     print("  [E] Proposed Method E       : 4-Parameter Sobel Capacity Decision + Guided Selection (Blind PNG)")
+    print("  [F1] Optimized Two-Phase    : Pemanfaatan bit-0 & bit-1 terpadu (Active Dual-Bit Packing, Blind PNG)")
+    print("  [F2] Distortion-Aware Score : Model HVS SSIM Distortion Sensitivity ((sigma^2+58.5)*ln(1+G)+R, Blind PNG)")
+    print("  [F3] Combined Optimization  : Hibridisasi stabilitas PSNR dan pendongkrak SSIM simultan (Blind PNG)")
     print("=" * 120)
 
     images = load_all_dataset()
@@ -918,6 +1156,66 @@ def main():
             except ValueError as ve:
                 psnr_ab2, ssim_ab2, mse_ab2, rr_ab2, cap_ab2, t_ab2 = float('nan'), float('nan'), float('nan'), float('nan'), 0, 0.0
 
+            # ------------------------------------------------------------------
+            # [F1] Varian Optimasi F1: Optimized Two-Phase Embedding
+            # ------------------------------------------------------------------
+            t0 = time.time()
+            stegoF1, capF1, modelF1 = embed_f1(cover, msg)
+            ok, pngF1 = cv2.imencode('.png', stegoF1)
+            reloadedF1 = cv2.imdecode(pngF1, cv2.IMREAD_GRAYSCALE)
+            recF1 = extract_blind_f1(reloadedF1, nbits)
+            t_F1 = time.time() - t0
+            rrF1 = 100.0 * float(np.mean(recF1 == msg))
+            psnrF1, ssimF1, mseF1 = calc_metrics(cover, reloadedF1)
+            record['F1_psnr'], record['F1_ssim'], record['F1_cap'] = psnrF1, ssimF1, capF1
+            eval_v3_rows.append({
+                'image': name, 'payload_kb': kb, 'payload_bits': nbits, 'method': 'F1_optimized_two_phase',
+                'capacity_bits': capF1, 'embedded_bits': nbits, 'full_payload': True,
+                'mse': mseF1, 'psnr_db': psnrF1, 'ssim': ssimF1, 'recovery_pct': rrF1,
+                'extraction': 'blind PNG', 'time_sec': t_F1
+            })
+            print(f"{' ':8} | {'F1 - Opt Two-Phase':<27} | {capF1:>8} b | {mseF1:8.5f}   | {psnrF1:8.3f} dB | {ssimF1:10.7f} | {rrF1:5.1f}% | {t_F1:5.3f}s (Blind)")
+
+            # ------------------------------------------------------------------
+            # [F2] Varian Optimasi F2: Distortion-Aware Sobel Selection
+            # ------------------------------------------------------------------
+            t0 = time.time()
+            stegoF2, capF2, modelF2 = embed_f2(cover, msg)
+            ok, pngF2 = cv2.imencode('.png', stegoF2)
+            reloadedF2 = cv2.imdecode(pngF2, cv2.IMREAD_GRAYSCALE)
+            recF2 = extract_blind_f2(reloadedF2, nbits)
+            t_F2 = time.time() - t0
+            rrF2 = 100.0 * float(np.mean(recF2 == msg))
+            psnrF2, ssimF2, mseF2 = calc_metrics(cover, reloadedF2)
+            record['F2_psnr'], record['F2_ssim'], record['F2_cap'] = psnrF2, ssimF2, capF2
+            eval_v3_rows.append({
+                'image': name, 'payload_kb': kb, 'payload_bits': nbits, 'method': 'F2_distortion_aware_selection',
+                'capacity_bits': capF2, 'embedded_bits': nbits, 'full_payload': True,
+                'mse': mseF2, 'psnr_db': psnrF2, 'ssim': ssimF2, 'recovery_pct': rrF2,
+                'extraction': 'blind PNG', 'time_sec': t_F2
+            })
+            print(f"{' ':8} | {'F2 - Distortion-Aware':<27} | {capF2:>8} b | {mseF2:8.5f}   | {psnrF2:8.3f} dB | {ssimF2:10.7f} | {rrF2:5.1f}% | {t_F2:5.3f}s (Blind)")
+
+            # ------------------------------------------------------------------
+            # [F3] Varian Optimasi F3: Combined Optimization
+            # ------------------------------------------------------------------
+            t0 = time.time()
+            stegoF3, capF3, modelF3 = embed_f3(cover, msg)
+            ok, pngF3 = cv2.imencode('.png', stegoF3)
+            reloadedF3 = cv2.imdecode(pngF3, cv2.IMREAD_GRAYSCALE)
+            recF3 = extract_blind_f3(reloadedF3, nbits)
+            t_F3 = time.time() - t0
+            rrF3 = 100.0 * float(np.mean(recF3 == msg))
+            psnrF3, ssimF3, mseF3 = calc_metrics(cover, reloadedF3)
+            record['F3_psnr'], record['F3_ssim'], record['F3_cap'] = psnrF3, ssimF3, capF3
+            eval_v3_rows.append({
+                'image': name, 'payload_kb': kb, 'payload_bits': nbits, 'method': 'F3_combined_optimization',
+                'capacity_bits': capF3, 'embedded_bits': nbits, 'full_payload': True,
+                'mse': mseF3, 'psnr_db': psnrF3, 'ssim': ssimF3, 'recovery_pct': rrF3,
+                'extraction': 'blind PNG', 'time_sec': t_F3
+            })
+            print(f"{' ':8} | {'F3 - Combined Opt':<27} | {capF3:>8} b | {mseF3:8.5f}   | {psnrF3:8.3f} dB | {ssimF3:10.7f} | {rrF3:5.1f}% | {t_F3:5.3f}s (Blind)")
+
             # Hitung persentase piksel yang berubah kapasitasnya karena Sobel
             sobel_changed_pct = 100.0 * float(np.mean(modelE['changed_mask']))
             up_2b = int(np.sum((modelE['feat3_bits'] < 2) & (modelE['feat4_bits'] == 2)))
@@ -926,9 +1224,16 @@ def main():
 
             diff_ssim_E_A = ssimE - record['A_ssim']
             diff_psnr_E_A = psnrE - record['A_psnr']
-            diff_ssim_E_D = ssimE - record['D_ssim']
+            diff_ssim_F2_A = ssimF2 - record['A_ssim']
+            diff_psnr_F2_A = psnrF2 - record['A_psnr']
+            diff_ssim_F3_A = ssimF3 - record['A_ssim']
+            diff_psnr_F3_A = psnrF3 - record['A_psnr']
 
-            print(f"{' ':8} | >>> Dampak E vs A: PSNR {diff_psnr_E_A:+.3f} dB | SSIM {diff_ssim_E_A:+.7f} {'(UNGGUL)' if diff_ssim_E_A > 0 else '(TURUN)'} | Piksel Berubah Sobel: {sobel_changed_pct:.2f}%")
+            print(f"{' ':8} | >>> Ringkasan vs Baseline A:")
+            print(f"{' ':8} |     Metode E : PSNR {diff_psnr_E_A:+.3f} dB | SSIM {diff_ssim_E_A:+.7f} {'(UNGGUL)' if diff_ssim_E_A > 0 else '(TURUN)'}")
+            print(f"{' ':8} |     Varian F1: PSNR {psnrF1 - record['A_psnr']:+.3f} dB | SSIM {ssimF1 - record['A_ssim']:+.7f}")
+            print(f"{' ':8} |     Varian F2: PSNR {diff_psnr_F2_A:+.3f} dB | SSIM {diff_ssim_F2_A:+.7f}")
+            print(f"{' ':8} |     Varian F3: PSNR {diff_psnr_F3_A:+.3f} dB | SSIM {diff_ssim_F3_A:+.7f}")
             print("-" * 120)
 
             sobel_contrib_rows.append({
@@ -941,29 +1246,44 @@ def main():
                 'pixels_protected_0bit': down_0b,
                 'Cap_A': record['A_cap'],
                 'Cap_E': capE,
+                'Cap_F1': capF1,
                 'PSNR_A': record['A_psnr'],
                 'PSNR_B': record['B_psnr'],
                 'PSNR_C': record['C_psnr'],
                 'PSNR_D': record['D_psnr'],
                 'PSNR_E': psnrE,
+                'PSNR_F1': psnrF1,
+                'PSNR_F2': psnrF2,
+                'PSNR_F3': psnrF3,
                 'PSNR_E_cap_only': psnr_ab1,
                 'PSNR_E_route_only': psnr_ab2,
                 'Diff_PSNR_E_minus_A': diff_psnr_E_A,
+                'Diff_PSNR_F2_minus_A': diff_psnr_F2_A,
+                'Diff_PSNR_F3_minus_A': diff_psnr_F3_A,
                 'SSIM_A': record['A_ssim'],
                 'SSIM_B': record['B_ssim'],
                 'SSIM_C': record['C_ssim'],
                 'SSIM_D': record['D_ssim'],
                 'SSIM_E': ssimE,
+                'SSIM_F1': ssimF1,
+                'SSIM_F2': ssimF2,
+                'SSIM_F3': ssimF3,
                 'SSIM_E_cap_only': ssim_ab1,
                 'SSIM_E_route_only': ssim_ab2,
                 'Diff_SSIM_E_minus_A': diff_ssim_E_A,
-                'Diff_SSIM_E_minus_D': diff_ssim_E_D,
+                'Diff_SSIM_F2_minus_A': diff_ssim_F2_A,
+                'Diff_SSIM_F3_minus_A': diff_ssim_F3_A,
                 'Recovery_Rate_E': rrE,
-                'Comp_Time_E_sec': t_E
+                'Recovery_Rate_F1': rrF1,
+                'Recovery_Rate_F2': rrF2,
+                'Recovery_Rate_F3': rrF3,
+                'Comp_Time_E_sec': t_E,
+                'Comp_Time_F2_sec': t_F2,
+                'Comp_Time_F3_sec': t_F3
             })
 
     # ==========================================================================
-    # 11. MENULIS BERKAS CSV KELUARAN
+    # 12. MENULIS BERKAS CSV KELUARAN
     # ==========================================================================
     csv_eval_path = os.path.join(BASE_DIR, 'hasil_ablasi_v3.csv')
     if eval_v3_rows:
@@ -971,7 +1291,7 @@ def main():
             writer = csv.DictWriter(f, fieldnames=list(eval_v3_rows[0].keys()))
             writer.writeheader()
             writer.writerows(eval_v3_rows)
-        print(f"\n[OK] Hasil eksperimen komparasi V3 tersimpan: {csv_eval_path}")
+        print(f"\n[OK] Hasil eksperimen komparasi V3 (termasuk F1, F2, F3) tersimpan: {csv_eval_path}")
 
     csv_contrib_path = os.path.join(BASE_DIR, 'analisis_kontribusi_sobel.csv')
     if sobel_contrib_rows:
@@ -979,7 +1299,7 @@ def main():
             writer = csv.DictWriter(f, fieldnames=list(sobel_contrib_rows[0].keys()))
             writer.writeheader()
             writer.writerows(sobel_contrib_rows)
-        print(f"[OK] Analisis kontribusi Sobel tersimpan: {csv_contrib_path}")
+        print(f"[OK] Analisis kontribusi Sobel & varian optimasi tersimpan: {csv_contrib_path}")
 
     t_global_end = time.time()
     print(f"\nSeluruh pengujian komparasi selesai dalam {t_global_end - t_global_start:.2f} detik.")
